@@ -19,8 +19,8 @@ export class MainMenuScene extends Phaser.Scene {
     super({ key: 'MainMenuScene' });
   }
 
-  init(data: { meta?: MetaSystem }): void {
-    this.meta = data.meta ?? new MetaSystem();
+  init(data?: { meta?: MetaSystem }): void {
+    this.meta = data?.meta instanceof MetaSystem ? data.meta : new MetaSystem();
   }
 
   create(): void {
@@ -92,6 +92,7 @@ export class MainMenuScene extends Phaser.Scene {
         this.toggleEquip(itemId);
       });
     });
+    el.querySelector('#btn-shop-reset')?.addEventListener('click', () => this.resetShopProgress());
 
     this.selectStarter(0);
 
@@ -126,6 +127,9 @@ export class MainMenuScene extends Phaser.Scene {
         </div>
       `;
     }).join('');
+
+    const invested = this.meta.totalCoinsSpent();
+    const ownedAny = Object.keys(this.meta.purchasedItems).length > 0;
 
     return `
       <style>
@@ -223,6 +227,20 @@ export class MainMenuScene extends Phaser.Scene {
         .shop-equip-btn { background: rgba(255,255,255,0.1); color: #aaa; border: 1px solid rgba(255,255,255,0.2); }
         .shop-equip-btn.equipped { background: rgba(255,215,0,0.2); color: #ffd700; border-color: #ffd700; }
         .shop-maxed { font-size: 6px; color: #ffd700; }
+        /* Shop reset */
+        .shop-reset-wrap {
+          margin-top: 16px; display: flex; align-items: center; justify-content: space-between;
+          gap: 10px; padding: 12px 14px; background: rgba(231,76,60,0.06);
+          border: 1px solid rgba(231,76,60,0.3); border-radius: 8px;
+        }
+        .shop-reset-info { font-size: 7px; color: #aaa; }
+        .shop-reset-btn {
+          font-family: 'Press Start 2P', monospace; font-size: 7px;
+          background: rgba(231,76,60,0.2); color: #e74c3c;
+          border: 1px solid rgba(231,76,60,0.5); padding: 8px 14px; border-radius: 4px;
+          cursor: pointer; transition: all 0.2s; white-space: nowrap;
+        }
+        .shop-reset-btn:hover { background: rgba(231,76,60,0.4); color: #fff; }
         /* Stats */
         .stats-grid {
           display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
@@ -261,7 +279,7 @@ export class MainMenuScene extends Phaser.Scene {
         </div>
         <button id="btn-start-run">START RUN</button>
         <div class="controls-hint">
-          ARROW KEYS: move &nbsp;|&nbsp; Q/W/E/R: use moves<br>
+          ARROW KEYS: move &nbsp;|&nbsp; Q/W/E/R: use moves &nbsp;|&nbsp; ESC: pause/quit<br>
           ARROW KEYS: navigate menus &nbsp;|&nbsp; SPACE/ENTER: confirm
         </div>
       </div>
@@ -273,6 +291,12 @@ export class MainMenuScene extends Phaser.Scene {
           Equip up to ${MAX_EQUIPPED_PASSIVES} passive items per run
         </div>
         ${shopRows}
+        ${ownedAny ? `
+          <div class="shop-reset-wrap">
+            <div class="shop-reset-info">Invested: 🪙${invested}</div>
+            <button class="shop-reset-btn" id="btn-shop-reset">↺ RESET &amp; REFUND</button>
+          </div>
+        ` : ''}
       </div>
 
       <!-- STATS TAB -->
@@ -309,13 +333,11 @@ export class MainMenuScene extends Phaser.Scene {
       ctx.clearRect(0, 0, 64, 64);
 
       const tex = this.textures.get(s.id);
-      if (tex && tex.source[0]) {
-        const fw = Math.floor(tex.source[0].width / 4);
-        const fh = Math.floor(tex.source[0].height / 4);
-        const frame = 0; // first frame
+      const frame0 = tex?.get(0);
+      if (tex && tex.source[0] && frame0) {
         ctx.drawImage(
           tex.source[0].image as HTMLImageElement,
-          (frame % 4) * fw, Math.floor(frame / 4) * fh, fw, fh,
+          frame0.cutX, frame0.cutY, frame0.cutWidth, frame0.cutHeight,
           0, 0, 64, 64
         );
       } else {
@@ -365,6 +387,13 @@ export class MainMenuScene extends Phaser.Scene {
     } else {
       this.meta.equipItem(itemId);
     }
+    this.rebuildMenu();
+  }
+
+  private resetShopProgress(): void {
+    const invested = this.meta.totalCoinsSpent();
+    if (!confirm(`Reset the shop and refund all ${invested} PokéCoins?`)) return;
+    this.meta.resetShop();
     this.rebuildMenu();
   }
 

@@ -11,12 +11,13 @@ export abstract class MoveBase {
   protected data: MoveData;
   protected player: Player;
   cooldownRemaining: number = 0;
-  isAutoActive: boolean = false;  // for toggle moves
+  isAutoActive: boolean = false;  // for auto/toggle moves
 
   constructor(scene: Phaser.Scene, data: MoveData, player: Player) {
     this.scene = scene;
     this.data = data;
     this.player = player;
+    this.isAutoActive = data.castMode === 'auto'; // auto moves fire by default, toggle off with key
   }
 
   get id(): string { return this.data.id; }
@@ -34,7 +35,7 @@ export abstract class MoveBase {
   update(delta: number, enemies: EnemyState[]): void {
     this.cooldownRemaining = Math.max(0, this.cooldownRemaining - delta);
 
-    if (this.data.castMode === 'auto' && this.cooldownRemaining === 0) {
+    if (this.data.castMode === 'auto' && this.isAutoActive && this.cooldownRemaining === 0) {
       this.fire(enemies);
       this.cooldownRemaining = this.cooldownMax;
     } else if (this.data.castMode === 'toggle' && this.isAutoActive) {
@@ -42,10 +43,16 @@ export abstract class MoveBase {
     }
   }
 
-  /** Called on manual key press */
+  /** Called on key press */
   onPress(enemies: EnemyState[]): void {
-    if (this.data.castMode === 'toggle') {
-      this.isAutoActive = !this.isAutoActive;
+    if (this.data.castMode === 'auto' || this.data.castMode === 'toggle') {
+      if (this.isAutoActive) {
+        // Turning off puts the move on cooldown (can't spam toggling)
+        this.isAutoActive = false;
+        this.cooldownRemaining = this.cooldownMax;
+      } else if (this.cooldownRemaining === 0) {
+        this.isAutoActive = true;
+      }
       return;
     }
     if (this.cooldownRemaining > 0) return;

@@ -36,11 +36,11 @@ export const STARTERS: StarterData[] = [
     color: 0x78c850,
     evolutions: [
       { id: 'bulbasaur',  name: 'Bulbasaur',  level: 1,  hpBonus: 0,  atkBonus: 0,  spdBonus: 0 },
-      { id: 'ivysaur',   name: 'Ivysaur',    level: 16, hpBonus: 25, atkBonus: 10, spdBonus: 5 },
-      { id: 'venusaur',  name: 'Venusaur',   level: 36, hpBonus: 60, atkBonus: 30, spdBonus: 10 },
+      { id: 'ivysaur',   name: 'Ivysaur',    level: 5,  hpBonus: 25, atkBonus: 10, spdBonus: 5 },
+      { id: 'venusaur',  name: 'Venusaur',   level: 10, hpBonus: 60, atkBonus: 30, spdBonus: 10 },
     ],
     startMoves: ['vineWhip'],
-    baseStats: { hp: 220, attack: 45, speed: 90, collectionRadius: 80 },
+    baseStats: { hp: 20, attack: 45, speed: 90, collectionRadius: 80 },
   },
   {
     id: 'charmander',
@@ -50,11 +50,11 @@ export const STARTERS: StarterData[] = [
     color: 0xf08030,
     evolutions: [
       { id: 'charmander',  name: 'Charmander',  level: 1,  hpBonus: 0,  atkBonus: 0,  spdBonus: 0 },
-      { id: 'charmeleon',  name: 'Charmeleon',  level: 16, hpBonus: 20, atkBonus: 15, spdBonus: 15 },
-      { id: 'charizard',   name: 'Charizard',   level: 36, hpBonus: 50, atkBonus: 40, spdBonus: 25 },
+      { id: 'charmeleon',  name: 'Charmeleon',  level: 5,  hpBonus: 20, atkBonus: 15, spdBonus: 15 },
+      { id: 'charizard',   name: 'Charizard',   level: 10, hpBonus: 50, atkBonus: 40, spdBonus: 25 },
     ],
     startMoves: ['ember'],
-    baseStats: { hp: 195, attack: 52, speed: 115, collectionRadius: 70 },
+    baseStats: { hp: 20, attack: 52, speed: 115, collectionRadius: 70 },
   },
   {
     id: 'squirtle',
@@ -64,10 +64,10 @@ export const STARTERS: StarterData[] = [
     color: 0x6890f0,
     evolutions: [
       { id: 'squirtle',   name: 'Squirtle',   level: 1,  hpBonus: 0,  atkBonus: 0,  spdBonus: 0 },
-      { id: 'wartortle',  name: 'Wartortle',  level: 16, hpBonus: 30, atkBonus: 12, spdBonus: 8 },
-      { id: 'blastoise',  name: 'Blastoise',  level: 36, hpBonus: 70, atkBonus: 28, spdBonus: 12 },
+      { id: 'wartortle',  name: 'Wartortle',  level: 5,  hpBonus: 30, atkBonus: 12, spdBonus: 8 },
+      { id: 'blastoise',  name: 'Blastoise',  level: 10, hpBonus: 70, atkBonus: 28, spdBonus: 12 },
     ],
     startMoves: ['waterGun'],
-    baseStats: { hp: 220, attack: 48, speed: 85, collectionRadius: 90 },
+    baseStats: { hp: 20, attack: 48, speed: 85, collectionRadius: 90 },
   },
 ];

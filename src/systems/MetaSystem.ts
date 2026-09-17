@@ -1,7 +1,7 @@
 // ============================================================
 // src/systems/MetaSystem.ts — localStorage persistence
 // ============================================================
-import { ALL_PASSIVES, MAX_EQUIPPED_PASSIVES } from '../data/passives';
+import { ALL_PASSIVES, MAX_EQUIPPED_PASSIVES, PASSIVES } from '../data/passives';
 
 export interface MetaData {
   coins: number;
@@ -84,6 +84,39 @@ export class MetaSystem {
       this.data.equippedItems.splice(idx, 1);
       this.save();
     }
+  }
+
+  isAchievementUnlocked(key: string): boolean {
+    return !!this.data.achievements[key];
+  }
+
+  unlockAchievement(key: string, reward: number): boolean {
+    if (this.data.achievements[key]) return false;
+    this.data.achievements[key] = true;
+    this.data.coins += reward;
+    this.save();
+    return true;
+  }
+
+  totalCoinsSpent(): number {
+    let total = 0;
+    for (const [id, level] of Object.entries(this.data.purchasedItems)) {
+      const p = PASSIVES[id];
+      if (!p) continue;
+      for (let lvl = 1; lvl <= level; lvl++) {
+        total += lvl === 1 ? p.cost : (p.levels[lvl - 1]?.upgradeCost ?? 0);
+      }
+    }
+    return total;
+  }
+
+  resetShop(): number {
+    const spent = this.totalCoinsSpent();
+    this.data.purchasedItems = {};
+    this.data.equippedItems = [];
+    this.data.coins += spent;
+    this.save();
+    return spent;
   }
 
   recordRunEnd(level: number, kills: number, timeSeconds: number): void {

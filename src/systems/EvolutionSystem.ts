@@ -6,7 +6,7 @@ import { Player } from '../entities/Player';
 import { StarterData } from '../data/starters';
 import { registerDirectionalAnimations } from '../utils/SpriteAnimationHelper';
 
-const EVOLUTION_LEVELS = [16, 36];
+const EVOLUTION_LEVELS = [5, 10];
 
 export class EvolutionSystem {
   private scene: Phaser.Scene;
@@ -49,7 +49,7 @@ export class EvolutionSystem {
     // Swap sprite texture if available
     const key = evo.id;
     if (this.scene.textures.exists(key)) {
-      this.player.setTexture(key);
+      this.player.setTexture(key, 0);
       // Ensure directional animations are registered for the evolved form
       registerDirectionalAnimations(this.scene.anims, key);
     }

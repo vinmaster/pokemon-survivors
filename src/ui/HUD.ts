@@ -12,8 +12,10 @@ export class HUD {
 
   // DOM overlay (layered on top of Phaser canvas)
   private hudEl: HTMLDivElement;
+  onQuitClick?: () => void;
   private hpFill: HTMLDivElement;
   private xpFill: HTMLDivElement;
+  private xpText: HTMLSpanElement;
   private hpText: HTMLSpanElement;
   private levelText: HTMLSpanElement;
   private timerText: HTMLSpanElement;
@@ -29,6 +31,7 @@ export class HUD {
     this.hudEl = this.createHUD();
     this.hpFill      = this.hudEl.querySelector('#hud-hp-fill')!;
     this.xpFill      = this.hudEl.querySelector('#hud-xp-fill')!;
+    this.xpText      = this.hudEl.querySelector('#hud-xp-text')!;
     this.hpText      = this.hudEl.querySelector('#hud-hp-text')!;
     this.levelText   = this.hudEl.querySelector('#hud-level')!;
     this.timerText   = this.hudEl.querySelector('#hud-timer')!;
@@ -70,14 +73,22 @@ export class HUD {
           transition: width 0.2s;
         }
         #hud-hp-text {
-          color: #fff; font-size: 7px; text-align: center; margin-top: 2px;
+          color: #fff; font-size: 7px;
           text-shadow: 1px 1px 0 #000;
         }
         /* XP Bar */
         #hud-xp-bar {
-          position: absolute; bottom: 80px; left: 0; right: 0;
-          height: 10px; background: rgba(0,0,0,0.4);
-          border-top: 1px solid rgba(255,255,255,0.2);
+          position: absolute; top: 50px; left: 16px; width: 220px;
+        }
+        #hud-xp-label {
+          color: #fff; font-size: 8px; margin-bottom: 3px;
+          text-shadow: 1px 1px 0 #000;
+          display: flex; justify-content: space-between; align-items: center;
+        }
+        #hud-xp-text { color: #9bd0ff; font-size: 7px; text-shadow: 1px 1px 0 #000; }
+        #hud-xp-track {
+          height: 12px; background: rgba(0,0,0,0.5); border: 2px solid #fff;
+          border-radius: 3px; overflow: hidden;
         }
         #hud-xp-fill {
           height: 100%;
@@ -108,6 +119,7 @@ export class HUD {
         }
         .move-slot.active { border-color: #ffd700; box-shadow: 0 0 8px #ffd700; }
         .move-slot.toggle-on { border-color: #ff6820; box-shadow: 0 0 8px #ff6820; }
+        .move-slot.toggle-off { opacity: 0.5; border-color: rgba(255,255,255,0.15); }
         .move-slot-key {
           font-size: 9px; color: #ffd700; margin-bottom: 2px;
         }
@@ -142,16 +154,39 @@ export class HUD {
           opacity: 0; transition: opacity 0.3s; z-index: 150;
           text-align: center; text-shadow: 1px 1px 0 #000;
         }
+        /* Quit Button */
+        #hud-btn-quit {
+          position: absolute; top: 16px; right: 16px;
+          pointer-events: auto;
+          font-family: 'Press Start 2P', monospace;
+          font-size: 8px;
+          background: rgba(231, 76, 60, 0.85);
+          color: #fff;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          padding: 8px 12px;
+          border-radius: 4px;
+          cursor: pointer;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+          transition: all 0.15s ease;
+        }
+        #hud-btn-quit:hover {
+          background: #e74c3c;
+          transform: scale(1.05);
+          box-shadow: 0 0 12px rgba(231, 76, 60, 0.8);
+        }
       </style>
+
+      <!-- Quit Button -->
+      <button id="hud-btn-quit">QUIT [ESC]</button>
 
       <!-- HP Bar -->
       <div id="hud-hp-bar">
         <div id="hud-hp-label">
           <span>HP</span>
+          <span id="hud-hp-text">20 / 20</span>
           <span id="hud-level">Lv.1</span>
         </div>
         <div id="hud-hp-track"><div id="hud-hp-fill"></div></div>
-        <span id="hud-hp-text">220 / 220</span>
       </div>
 
       <!-- Timer & Kills -->
@@ -161,7 +196,13 @@ export class HUD {
       </div>
 
       <!-- XP Bar -->
-      <div id="hud-xp-bar"><div id="hud-xp-fill" style="width:0%"></div></div>
+      <div id="hud-xp-bar">
+        <div id="hud-xp-label">
+          <span>EXP</span>
+          <span id="hud-xp-text">0 / 10</span>
+        </div>
+        <div id="hud-xp-track"><div id="hud-xp-fill" style="width:0%"></div></div>
+      </div>
 
       <!-- Move Slots -->
       <div id="hud-moves">
@@ -180,6 +221,11 @@ export class HUD {
       <div id="hud-evo-banner"></div>
       <div id="hud-msg-banner"></div>
     `;
+
+    hud.querySelector('#hud-btn-quit')?.addEventListener('click', () => {
+      this.onQuitClick?.();
+    });
+
     document.body.appendChild(hud);
     return hud;
   }
@@ -201,6 +247,7 @@ export class HUD {
 
     // XP
     this.xpFill.style.width = `${p.xpPercent * 100}%`;
+    this.xpText.textContent = `${Math.floor(p.xp)} / ${p.xpToNext}`;
 
     // Timer
     const totalSec = Math.floor(elapsedSeconds);
@@ -217,12 +264,16 @@ export class HUD {
       const nameEl = document.getElementById(`slot-name-${key}`)!;
       const cdEl = document.getElementById(`slot-cd-${key}`)!;
       const slotEl = document.getElementById(`slot-${key}`)!;
-      slotEl.classList.remove('active', 'toggle-on');
+      slotEl.classList.remove('active', 'toggle-on', 'toggle-off');
       if (move) {
         nameEl.textContent = move.name;
         cdEl.style.width = `${move.cooldownPercent * 100}%`;
-        if (move.castMode === 'toggle' && move.isAutoActive) {
-          slotEl.classList.add('toggle-on');
+        if (move.castMode === 'auto' || move.castMode === 'toggle') {
+          if (move.isAutoActive) {
+            slotEl.classList.add('toggle-on');
+          } else {
+            slotEl.classList.add('toggle-off');
+          }
         } else if (move.cooldownPercent >= 1) {
           slotEl.classList.add('active');
         }

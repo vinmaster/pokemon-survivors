@@ -5,6 +5,8 @@ import Phaser from 'phaser';
 import { MetaSystem } from '../systems/MetaSystem';
 
 export class GameOverScene extends Phaser.Scene {
+  private meta!: MetaSystem;
+
   constructor() {
     super({ key: 'GameOverScene' });
   }
@@ -15,8 +17,9 @@ export class GameOverScene extends Phaser.Scene {
     timeSeconds: number;
     meta: MetaSystem;
   }): void {
-    data.meta.recordRunEnd(data.level, data.kills, data.timeSeconds);
-    this.buildDOM(data.level, data.kills, data.timeSeconds, data.meta);
+    this.meta = data.meta;
+    this.meta.recordRunEnd(data.level, data.kills, data.timeSeconds);
+    this.buildDOM(data.level, data.kills, data.timeSeconds, this.meta);
   }
 
   create(): void {
@@ -99,6 +102,6 @@ export class GameOverScene extends Phaser.Scene {
 
   private goMenu(): void {
     document.getElementById('gameover-screen')?.remove();
-    this.scene.start('MainMenuScene', { meta: this.scene.settings.data as MetaSystem });
+    this.scene.start('MainMenuScene', { meta: this.meta });
   }
 }

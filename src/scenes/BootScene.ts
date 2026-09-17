@@ -16,18 +16,20 @@ import { registerDirectionalAnimations } from '../utils/SpriteAnimationHelper';
 export interface SpriteConfig {
   key: string;
   path: string;
+  cols?: number;
+  rows?: number;
 }
 
 const POKEMON_SPRITES: SpriteConfig[] = [
-  { key: 'bulbasaur',  path: 'assets/sprite_recolor-0001-0000-0001.png' },
-  { key: 'ivysaur',    path: 'assets/sprite_recolor-0002-0000-0001.png' },
-  { key: 'venusaur',   path: 'assets/sprite_recolor-0003-0000-0001.png' },
-  { key: 'charmander', path: 'assets/sprite_recolor-0004-0000-0001.png' },
-  { key: 'charmeleon', path: 'assets/sprite_recolor-0005-0000-0001.png' },
-  { key: 'charizard',  path: 'assets/sprite_recolor-0006-0000-0001.png' },
-  { key: 'squirtle',   path: 'assets/sprite_recolor-0007-0000-0001.png' },
-  { key: 'wartortle',  path: 'assets/sprite_recolor-0008-0000-0001.png' },
-  { key: 'blastoise',  path: 'assets/sprite_recolor-0009-0000-0001.png' },
+  { key: 'bulbasaur',  path: 'assets/sprite_recolor-0001-0000-0001.png', cols: 4, rows: 4 },
+  { key: 'ivysaur',    path: 'assets/sprite_recolor-0002-0000-0001.png', cols: 4, rows: 4 },
+  { key: 'venusaur',   path: 'assets/sprite_recolor-0003-0000-0001.png', cols: 4, rows: 4 },
+  { key: 'charmander', path: 'assets/sprite_recolor-0004-0000-0001.png', cols: 4, rows: 4 },
+  { key: 'charmeleon', path: 'assets/sprite_recolor-0005-0000-0001.png', cols: 4, rows: 4 },
+  { key: 'charizard',  path: 'assets/sprite_recolor-0006-0000-0001.png', cols: 4, rows: 4 },
+  { key: 'squirtle',   path: 'assets/sprite_recolor-0007-0000-0001.png', cols: 4, rows: 4 },
+  { key: 'wartortle',  path: 'assets/sprite_recolor-0008-0000-0001.png', cols: 5, rows: 5 },
+  { key: 'blastoise',  path: 'assets/sprite_recolor-0009-0000-0001.png', cols: 4, rows: 4 },
 ];
 
 const ENEMY_SPRITES = [
@@ -62,15 +64,18 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Process loaded Pokémon images and calculate dynamic 4x4 grid dimensions
+    // Process loaded Pokémon images and calculate dynamic grid dimensions
     for (const p of POKEMON_SPRITES) {
       const rawKey = `raw_${p.key}`;
       if (this.textures.exists(rawKey)) {
         const rawTex = this.textures.get(rawKey);
         const src = rawTex.source[0];
-        const fw = Math.floor(src.width / 4);
-        const fh = Math.floor(src.height / 4);
-        console.log(`[Boot] Dynamically loaded ${p.key}: ${src.width}x${src.height} -> frame ${fw}x${fh}`);
+        // Default to 4x4 grid, unless specified or detected as 5x5 PMD walk sheet (e.g. 120x120 with 24x24 frames)
+        const cols = p.cols ?? (src.width === 120 && src.height === 120 ? 5 : 4);
+        const rows = p.rows ?? (src.width === 120 && src.height === 120 ? 5 : 4);
+        const fw = Math.floor(src.width / cols);
+        const fh = Math.floor(src.height / rows);
+        console.log(`[Boot] Dynamically loaded ${p.key}: ${src.width}x${src.height} (${cols}x${rows} grid) -> frame ${fw}x${fh}`);
         this.textures.addSpriteSheet(p.key, src.image as HTMLImageElement, {
           frameWidth: fw,
           frameHeight: fh,

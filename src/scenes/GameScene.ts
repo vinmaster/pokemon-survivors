@@ -10,6 +10,7 @@ import { EnemySystem } from '../systems/EnemySystem';
 import { MoveSystem } from '../systems/MoveSystem';
 import { XPSystem } from '../systems/XPSystem';
 import { EvolutionSystem } from '../systems/EvolutionSystem';
+import { AchievementSystem } from '../systems/AchievementSystem';
 import { HUD } from '../ui/HUD';
 import { PASSIVES } from '../data/passives';
 import { VineWhip } from '../moves/VineWhip';
@@ -30,19 +31,16 @@ export class GameScene extends Phaser.Scene {
   private moveSystem!: MoveSystem;
   private xpSystem!: XPSystem;
   private evolutionSystem!: EvolutionSystem;
+  private achievementSystem!: AchievementSystem;
   private hud!: HUD;
 
   private bgTile!: Phaser.GameObjects.TileSprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private wasdKeys!: {
-    W: Phaser.Input.Keyboard.Key;
-    A: Phaser.Input.Keyboard.Key;
-    S: Phaser.Input.Keyboard.Key;
-    D: Phaser.Input.Keyboard.Key;
-  };
 
   private elapsedTime = 0;
   private isGameOver = false;
+  private isPaused = false;
+  private pauseEl?: HTMLDivElement;
   private levelUpPending = false;
   private currentDirection = 'down';
 
@@ -128,15 +126,19 @@ export class GameScene extends Phaser.Scene {
     // HUD overlay
     this.hud = new HUD(this, this.player, this.moveSystem);
 
-    // Input Controls
+    // Kill milestone achievements
+    this.achievementSystem = new AchievementSystem(this.player, this.meta);
+    this.achievementSystem.onUnlock = (label, reward) => {
+      this.hud.showMessage(`🏆 ${label} — +${reward} PokéCoins`, 3000);
+    };
+
+    // Input Controls: Movement solely controlled via arrow keys (WASD removed to avoid conflicting with Q/W/E/R moves)
     const kb = this.input.keyboard!;
     this.cursors = kb.createCursorKeys();
-    this.wasdKeys = {
-      W: kb.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-      A: kb.addKey(Phaser.Input.Keyboard.KeyCodes.A),
-      S: kb.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-      D: kb.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-    };
+
+    // Pause / Quit controls
+    this.hud.onQuitClick = () => this.togglePause();
+    kb.on('keydown-ESC', () => this.togglePause());
   }
 
   private assignStarterMove(): void {
@@ -166,7 +168,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    if (this.isGameOver) return;
+    if (this.isGameOver || this.isPaused) return;
 
     // Check Player Death
     if (this.player.stats.hp <= 0) {
@@ -192,6 +194,7 @@ export class GameScene extends Phaser.Scene {
     this.moveSystem.update(delta, this.enemySystem.enemies);
     this.xpSystem.update(delta);
     this.evolutionSystem.check();
+    this.achievementSystem.check();
     this.player.update(delta);
 
     // HUD update
@@ -205,10 +208,10 @@ export class GameScene extends Phaser.Scene {
     let vx = 0;
     let vy = 0;
 
-    if (this.cursors.left.isDown || this.wasdKeys.A.isDown)  vx -= 1;
-    if (this.cursors.right.isDown || this.wasdKeys.D.isDown) vx += 1;
-    if (this.cursors.up.isDown || this.wasdKeys.W.isDown)    vy -= 1;
-    if (this.cursors.down.isDown || this.wasdKeys.S.isDown)  vy += 1;
+    if (this.cursors.left.isDown)  vx -= 1;
+    if (this.cursors.right.isDown) vx += 1;
+    if (this.cursors.up.isDown)    vy -= 1;
+    if (this.cursors.down.isDown)  vy += 1;
 
     if (vx !== 0 && vy !== 0) {
       // Normalize diagonal speed
@@ -241,8 +244,114 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private togglePause(): void {
+    if (this.isGameOver || this.levelUpPending) return;
+    if (this.isPaused) {
+      this.resumeRun();
+    } else {
+      this.showPauseMenu();
+    }
+  }
+
+  private showPauseMenu(): void {
+    this.isPaused = true;
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    body?.setVelocity(0, 0);
+
+    const time = Math.floor(this.elapsedTime);
+    const min = Math.floor(time / 60);
+    const sec = time % 60;
+    const timeStr = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    const coins = Math.floor(this.player.killCount / 3) + this.player.level;
+
+    const el = document.createElement('div');
+    el.id = 'pause-overlay';
+    el.innerHTML = `
+      <style>
+        #pause-overlay {
+          position: fixed; inset: 0; z-index: 500;
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          background: rgba(10, 10, 26, 0.88); backdrop-filter: blur(4px);
+          font-family: 'Press Start 2P', monospace; user-select: none;
+          animation: pauseFadeIn 0.2s ease;
+        }
+        @keyframes pauseFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #pause-title {
+          font-size: 24px; color: #ffd700; margin-bottom: 24px;
+          text-shadow: 0 0 20px rgba(255,215,0,0.6), 2px 2px 0 #000;
+        }
+        .pause-stats {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+          margin-bottom: 24px; width: 340px;
+        }
+        .pause-stat {
+          background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 6px; padding: 10px; text-align: center;
+        }
+        .pause-stat-lbl { font-size: 6px; color: #888; margin-bottom: 4px; }
+        .pause-stat-val { font-size: 13px; color: #fff; }
+        .pause-coins {
+          font-size: 9px; color: #ffd700; margin-bottom: 24px;
+          background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.25);
+          padding: 8px 16px; border-radius: 6px;
+        }
+        .pause-actions { display: flex; flex-direction: column; gap: 12px; width: 260px; }
+        .pause-btn {
+          font-family: 'Press Start 2P', monospace; font-size: 10px;
+          border: none; padding: 12px 20px; border-radius: 6px;
+          cursor: pointer; transition: all 0.15s;
+        }
+        #btn-resume {
+          background: linear-gradient(135deg, #27ae60, #2ecc71);
+          color: #fff; box-shadow: 0 4px 14px rgba(39,174,96,0.4);
+        }
+        #btn-resume:hover { transform: scale(1.04); }
+        #btn-quit-run {
+          background: linear-gradient(135deg, #c0392b, #e74c3c);
+          color: #fff; box-shadow: 0 4px 14px rgba(192,57,43,0.4);
+        }
+        #btn-quit-run:hover { transform: scale(1.04); }
+        .pause-hint { font-size: 7px; color: #666; margin-top: 16px; }
+      </style>
+      <div id="pause-title">GAME PAUSED</div>
+      <div class="pause-stats">
+        <div class="pause-stat"><div class="pause-stat-lbl">Time Survived</div><div class="pause-stat-val">${timeStr}</div></div>
+        <div class="pause-stat"><div class="pause-stat-lbl">Level Reached</div><div class="pause-stat-val">${this.player.level}</div></div>
+        <div class="pause-stat"><div class="pause-stat-lbl">Enemies Defeated</div><div class="pause-stat-val">${this.player.killCount}</div></div>
+        <div class="pause-stat"><div class="pause-stat-lbl">Current HP</div><div class="pause-stat-val">${this.player.stats.hp}/${this.player.stats.maxHp}</div></div>
+      </div>
+      <div class="pause-coins">🪙 ~${coins} PokéCoins earned so far</div>
+      <div class="pause-actions">
+        <button class="pause-btn" id="btn-resume">RESUME</button>
+        <button class="pause-btn" id="btn-quit-run">QUIT RUN</button>
+      </div>
+      <div class="pause-hint">ESC to resume</div>
+    `;
+
+    document.body.appendChild(el);
+    this.pauseEl = el;
+
+    el.querySelector('#btn-resume')?.addEventListener('click', () => this.resumeRun());
+    el.querySelector('#btn-quit-run')?.addEventListener('click', () => this.quitRun());
+  }
+
+  private resumeRun(): void {
+    this.pauseEl?.remove();
+    this.pauseEl = undefined;
+    document.getElementById('pause-overlay')?.remove();
+    this.isPaused = false;
+  }
+
+  private quitRun(): void {
+    this.resumeRun();
+    this.triggerGameOver();
+  }
+
   private triggerGameOver(): void {
     this.isGameOver = true;
+    this.pauseEl?.remove();
+    this.pauseEl = undefined;
+    document.getElementById('pause-overlay')?.remove();
     this.hud.destroy();
     this.enemySystem.destroy();
     this.xpSystem.destroyAll();
